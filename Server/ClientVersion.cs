@@ -329,11 +329,47 @@ namespace Server
         {
             if (inVersion.Major >= 67) //Enhanced Client
             {
-                //TODO:
-                return new ClientVersion(inVersion.Major, inVersion.Minor, inVersion.Revision, inVersion.Patch, ClientType.EC);
+                //TODO: Get various Enhanced Client version to confirm these:
+
+                if (inVersion.Revision >= 45)
+                {
+                    return new ClientVersion(7, 0, 45, 65, ClientType.EC);
+                }
+                else if (inVersion.Revision >= 33)
+                {
+                    return new ClientVersion(7, 0, 33, 1, ClientType.EC);
+                }
+                else if (inVersion.Revision >= 30)
+                {
+                    return new ClientVersion(7, 0, 30, 0, ClientType.EC);
+                }
+                else if (inVersion.Revision >= 16)
+                {
+                    return new ClientVersion(7, 0, 16, 0, ClientType.EC);
+                }
+                else if (inVersion.Revision >= 13)
+                {
+                    return new ClientVersion(7, 0, 13, 0, ClientType.EC);
+                }
+                else if (inVersion.Revision >= 9)
+                {
+                    return new ClientVersion(7, 0, 9, 0, ClientType.EC);
+                }
+                else if (inVersion.Revision >= 0)
+                {
+                    return new ClientVersion(7, 0, 0, 0, ClientType.EC);
+                }
+                else
+                {
+                    //Unknown. Will assume latest EC client that JustUO supports
+                    return new ClientVersion(inVersion.Major, inVersion.Minor, inVersion.Revision, inVersion.Patch, ClientType.EC);
+                }
+
+                
             }
             else if ((inVersion.Major == 66) && (inVersion.Minor == 55)) //Kingdom Reborn Client
             {
+                //TODO: Get hold of 2.59.0.2 client exe to confirm this:
                 if (inVersion.Revision >= 53)
                 {
                     return new ClientVersion(6, 0, 14, 2, ClientType.KR); //2.59.0.2

@@ -263,8 +263,8 @@ namespace Server.Network
 			m_Stream.Write((short)item.Amount);
 			m_Stream.Write((short)item.X);
 			m_Stream.Write((short)item.Y);
-			m_Stream.Write((byte)0); // Grid Location?
-			m_Stream.Write(m.Serial);
+            m_Stream.Write((byte)item.GridLocation); // Grid Location
+            m_Stream.Write(m.Serial);
 			m_Stream.Write((short)item.Hue);
 		}
 	}
@@ -360,8 +360,8 @@ namespace Server.Network
 				m_Stream.Write((ushort)bis.Amount);
 				m_Stream.Write((short)(i + 1)); //x
 				m_Stream.Write((short)1); //y
-				m_Stream.Write((byte)0); // Grid Location?
-				m_Stream.Write(bis.ContainerSerial);
+                m_Stream.Write((byte)i); // Grid Location?
+                m_Stream.Write(bis.ContainerSerial);
 				m_Stream.Write((ushort)bis.Hue);
 			}
 		}
@@ -497,8 +497,11 @@ namespace Server.Network
 			EnsureCapacity(12);
 
 			m_Stream.Write((short)0x19);
-			m_Stream.Write((byte)2);
-			m_Stream.Write(m.Serial);
+            if (m.NetState.IsKRClient)
+                m_Stream.Write((byte)5);
+            else
+                m_Stream.Write((byte)2);
+            m_Stream.Write(m.Serial);
 			m_Stream.Write((byte)0);
 
 			int lockBits = 0;
@@ -508,7 +511,14 @@ namespace Server.Network
 			lockBits |= (int)m.IntLock;
 
 			m_Stream.Write((byte)lockBits);
-		}
+
+            if (m.NetState.IsKRClient)
+            {
+                m_Stream.Write((byte)0);
+                m_Stream.Write((int)0);
+            }
+
+        }
 	}
 
 	public class EquipInfoAttribute
@@ -964,13 +974,18 @@ namespace Server.Network
 		public DisplayContextMenu(ContextMenu menu)
 			: base(0xBF)
 		{
-			ContextMenuEntry[] entries = menu.Entries;
+            bool isKRClient = menu.From.NetState.IsKRClient;
+
+            ContextMenuEntry[] entries = menu.Entries;
 
 			int length = (byte)entries.Length;
 
-			EnsureCapacity(12 + (length * 8));
+            if (isKRClient)
+                this.EnsureCapacity(12 + (length * 10));
+            else
+                this.EnsureCapacity(12 + (length * 8));
 
-			m_Stream.Write((short)0x14);
+            m_Stream.Write((short)0x14);
 			m_Stream.Write((short)0x02);
 
 			var target = menu.Target as IEntity;
@@ -998,8 +1013,20 @@ namespace Server.Network
 			{
 				ContextMenuEntry e = entries[i];
 
-				m_Stream.Write(e.Number);
-				m_Stream.Write((short)i);
+                if (isKRClient)
+                {
+                    if (e.Number > 3000000)
+                        m_Stream.Write((uint)e.Number);
+                    else
+                        m_Stream.Write((uint)(3000000 + e.Number));
+
+                    m_Stream.Write((short)i);
+                }
+                else
+                {
+                    m_Stream.Write(e.Number);
+                    m_Stream.Write((short)i);
+                }
 
 				int range = e.Range;
 
@@ -2181,8 +2208,8 @@ m_Stream.Write( (int) renderMode );
 					m_Stream.Write((ushort)(i + offset));
 					m_Stream.Write((short)0);
 					m_Stream.Write((short)0);
-					m_Stream.Write((byte)0); // Grid Location?
-					m_Stream.Write(item.Serial);
+                    m_Stream.Write((byte)item.GridLocation); // Grid Location?
+                    m_Stream.Write(item.Serial);
 					m_Stream.Write((short)0);
 
 					++written;
@@ -3547,7 +3574,13 @@ m_Stream.Write( (int) renderMode );
 
 			int type;
 
-			if (Core.HS && ns != null && ns.ExtendedStatus)
+            //TODO: Check if this is actually required for the KR client:
+            if ((m.NetState != null && m.NetState.IsKRClient))
+            {
+                type = 6;
+                EnsureCapacity(161);
+            }
+            else if (Core.HS && ns != null && ns.ExtendedStatus)
 			{
 				type = 6;
 				EnsureCapacity(121);
@@ -3934,8 +3967,10 @@ m_Stream.Write( (int) renderMode );
 			{
 				count++;
 			}
+            if (beholder.NetState != null && beholder.NetState.IsKRClient && beheld.FaceItemID > 0)
+                count++;
 
-			EnsureCapacity(23 + (count * 9));
+            EnsureCapacity(23 + (count * 9));
 
 			int hue = beheld.Hue;
 
@@ -4025,7 +4060,34 @@ m_Stream.Write( (int) renderMode );
 				}
 			}
 
-			m_Stream.Write(0); // terminate
+            if (beheld.FaceItemID > 0)
+            {
+                if (m_DupedLayers[(int)Layer.Face] != m_Version)
+                {
+                    m_DupedLayers[(int)Layer.Face] = m_Version;
+                    hue = beheld.FaceHue;
+
+                    if (beheld.SolidHueOverride >= 0)
+                        hue = beheld.SolidHueOverride;
+
+                    int itemID = beheld.FaceItemID & 0x3FFF;
+
+                    bool writeHue = (hue != 0);
+
+                    if (writeHue)
+                        itemID |= 0x8000;
+
+                    m_Stream.Write((int)FaceInfo.FakeSerial(beheld));
+                    m_Stream.Write((short)itemID);
+                    m_Stream.Write((byte)Layer.Face);
+
+                    if (writeHue)
+                        m_Stream.Write((short)hue);
+                }
+            }
+
+
+            m_Stream.Write(0); // terminate
 		}
 	}
 
@@ -5222,48 +5284,6 @@ m_Stream.Write( (int) renderMode );
             m_Stream.WriteLittleUniNull(name);
 
             m_Stream.Write((short)0); // terminate 
-        }
-    }
-
-    public class KRDisplayWaypoint : Packet
-    {
-        public KRDisplayWaypoint(IEntity e, WaypointType type, int cliLoc)
-            : this(e.Serial, e.Location, e.Map, type, false, cliLoc, String.Empty)
-        {
-        }
-
-        public KRDisplayWaypoint(IEntity e, WaypointType type, bool ignoreSerial, int cliLoc, string args)
-            : this(e.Serial, e.Location, e.Map, type, ignoreSerial, cliLoc, args)
-        {
-        }
-
-        public KRDisplayWaypoint(Serial serial, IPoint3D location, Map map, WaypointType type, bool ignoreSerial, int cliLoc)
-            : this(serial, location, map, type, ignoreSerial, cliLoc, String.Empty)
-        {
-        }
-
-        public KRDisplayWaypoint(Serial serial, IPoint3D location, Map map, WaypointType type, bool ignoreSerial, int cliLoc, string args)
-            : base(0xE5)
-        {
-            if (args == null)
-                args = String.Empty;
-
-            EnsureCapacity(21 + (args.Length * 2));
-
-            m_Stream.Write((int)serial);
-
-            m_Stream.Write((ushort)location.X);
-            m_Stream.Write((ushort)location.Y);
-            m_Stream.Write((byte)location.Z);
-
-            m_Stream.Write((byte)map.MapID);
-
-            m_Stream.Write((ushort)type);
-
-            m_Stream.Write((ushort)(ignoreSerial ? 1 : 0));
-
-            m_Stream.Write(cliLoc);
-            m_Stream.WriteLittleUniNull(args);
         }
     }
 

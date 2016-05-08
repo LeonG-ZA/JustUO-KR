@@ -219,6 +219,16 @@ namespace Server.Engines.PartySystem
                         f.Send(attrs);
                         m.Send(new MobileStatusCompact(f.CanBeRenamedBy(m), f));
                         m.Send(new MobileAttributesN(f));
+
+                        if (Core.AOS)
+                        {
+                            for (int i2 = 0; i2 < m_Members.Count; ++i2)
+                            {
+                                Mobile f2 = ((PartyMemberInfo)m_Members[i2]).Mobile;
+                                if (f2.NetState != null && f2.NetState.IsKRClient)
+                                    f2.NetState.Send(new DisplayWaypoint(f.Serial, f.X, f.Y, f.Z, f.Map.MapID, WaypointType.PartyMember, f.Name));
+                            }
+                        }
                     }
                 }
 
@@ -275,6 +285,15 @@ namespace Server.Engines.PartySystem
         {
             if (m == this.m_Leader)
             {
+                if (Core.AOS)
+                {
+                    for (int i = 0; i < m_Members.Count; ++i)
+                    {
+                        Mobile f = ((PartyMemberInfo)m_Members[i]).Mobile;
+                        SendToAll(new RemoveWaypoint(f.Serial));
+                    }
+                }
+
                 this.Disband();
             }
             else
@@ -292,6 +311,11 @@ namespace Server.Engines.PartySystem
 
                         this.SendToAll(new PartyRemoveMember(m, this));
                         this.SendToAll(1005452); // A player has been removed from your party.
+
+                        if (Core.AOS)
+                        {
+                            SendToAll(new RemoveWaypoint(m.Serial));
+                        }
 
                         break;
                     }

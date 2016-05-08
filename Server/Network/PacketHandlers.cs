@@ -146,7 +146,7 @@ namespace Server.Network
 			Register6017(0x08, 15, true, DropReq6017);
             #region Enhance Client
             Register(0x8D, 0, false, KRCreateCharacter);
-            Register(0xE1, 0, false, KRCharacterListUpdate);
+            //Register(0xE1, 0, false, KRCharacterListUpdate);
             Register(0xE4, 0, false, KRVerifierResponse);
             Register(0xFF, 4, false, KRSeed);
             Register(0xEC, 0, false, EquipMacro);
@@ -170,9 +170,12 @@ namespace Server.Network
 			RegisterExtended(0x24, false, UnhandledBF);
 			RegisterExtended(0x2C, true, BandageTarget);
             #region Enhance Client
-            RegisterExtended(0x2D, true, TargetedItemUse);
+            /*RegisterExtended(0x2D, true, TargetedItemUse);
             RegisterExtended(0x2E, true, TargetedSpell);
             RegisterExtended(0x2F, true, TargetedSkillUse);
+            RegisterExtended(0x30, true, TargetByResourceMacro);*/
+            RegisterExtended(0x2D, true, TargetedSpell);
+            RegisterExtended(0x2E, true, TargetedSkillUse);
             RegisterExtended(0x30, true, TargetByResourceMacro);
             #endregion
 
@@ -1121,7 +1124,11 @@ namespace Server.Network
 		public static void EquipReq(NetState state, PacketReader pvSrc)
 		{
 			Mobile from = state.Mobile;
-			Item item = from.Holding;
+
+            if (from.NetState != null && from.NetState.IsKRClient)
+                from.NetState.Send(new KRDropConfirm());
+
+            Item item = from.Holding;
 
 			bool valid = (item != null && item.HeldBy == from && item.Map == Map.Internal);
 
@@ -1242,7 +1249,11 @@ namespace Server.Network
 			{
 				item.SendInfoTo(state); // vanishing item fix
 			}
-		}
+
+            if (state != null && state.IsKRClient)
+                state.Send(new KRDropConfirm());
+
+        }
 
 		public static void ConfigurationFile(NetState state, PacketReader pvSrc)
 		{ }
@@ -3070,7 +3081,7 @@ namespace Server.Network
         {
         }
 
-        public static void KRCharacterListUpdate(NetState state, PacketReader pvSrc)
+        /*public static void KRCharacterListUpdate(NetState state, PacketReader pvSrc)
         {
             int length = pvSrc.Size;
             int always1 = pvSrc.ReadInt16();
@@ -3078,7 +3089,7 @@ namespace Server.Network
 
             // Need to confirm whether to actually call this stretch.
             state.Send(new CharacterListUpdate(state.Account));
-        }
+        }*/
 
         // KR Client Character Creation
         public static void KRCreateCharacter(NetState state, PacketReader pvSrc)
