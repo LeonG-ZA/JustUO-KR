@@ -44,7 +44,7 @@ namespace Server
         #region Enhance Client
         public static bool SendParticlesTo(NetState state)
         {
-            return (m_ParticleSupportType == ParticleSupportType.Full || (m_ParticleSupportType == ParticleSupportType.Detect && (state.IsUOTDClient || state.IsSAClient || state.IsKRClient)));
+            return (m_ParticleSupportType == ParticleSupportType.Full || (m_ParticleSupportType == ParticleSupportType.Detect && state.SupportsParticleEffects));
         }
         #endregion
 

@@ -25,8 +25,8 @@ namespace Server
 		Regular,
 		UOTD,
 		God,
-		SA,
-        IsKRClient
+		KR,
+        EC
 	}
 
 	public class ClientVersion : IComparable, IComparer
@@ -47,11 +47,6 @@ namespace Server
 		public int Patch { get { return m_Patch; } }
 
 		public ClientType Type { get { return m_Type; } }
-
-        public bool IsEnhanced
-        {
-            get { return m_Type == ClientType.IsKRClient; }
-        }
 
 		public string SourceString { get { return m_SourceString; } }
 
@@ -102,7 +97,7 @@ namespace Server
 
 		public override int GetHashCode()
 		{
-			return m_Major ^ m_Minor ^ m_Revision ^ m_Patch ^ (int)m_Type;
+			return m_Major ^ m_Minor ^ m_Revision ^ m_Patch;
 		}
 
 		public override bool Equals(object obj)
@@ -119,8 +114,7 @@ namespace Server
 				return false;
 			}
 
-			return m_Major == v.m_Major && m_Minor == v.m_Minor && m_Revision == v.m_Revision && m_Patch == v.m_Patch &&
-				   m_Type == v.m_Type;
+			return m_Major == v.m_Major && m_Minor == v.m_Minor && m_Revision == v.m_Revision && m_Patch == v.m_Patch;
 		}
 
 		private string _ToStringImpl()
@@ -197,9 +191,13 @@ namespace Server
 				}
 
                 #region Enhance Client
-                if (m_Major >= 6 && m_Revision >= 14 && m_Patch >= 3)
+                if (fmt.IndexOf("ec") >= 0)
                 {
-                    m_Type = ClientType.SA;
+                    m_Type = ClientType.EC;
+                }
+                else if (fmt.IndexOf("kr") >= 0)
+                {
+                    m_Type = ClientType.KR;
                 }
                 else if (fmt.IndexOf("god") >= 0 || fmt.IndexOf("gq") >= 0)
                 {
@@ -326,5 +324,91 @@ namespace Server
 
 			return a.CompareTo(b);
 		}
-	}
+
+        public static ClientVersion ConvertToRegularVersion(ClientVersion inVersion)
+        {
+            if (inVersion.Major >= 67) //Enhanced Client
+            {
+                //TODO:
+                return new ClientVersion(inVersion.Major, inVersion.Minor, inVersion.Revision, inVersion.Patch, ClientType.EC);
+            }
+            else if ((inVersion.Major == 66) && (inVersion.Minor == 55)) //Kingdom Reborn Client
+            {
+                if (inVersion.Revision >= 53)
+                {
+                    return new ClientVersion(6, 0, 14, 2, ClientType.KR); //2.59.0.2
+                }
+                switch (inVersion.Revision)
+                {
+                    case 52:
+                        return new ClientVersion(6, 0, 13, 1, ClientType.KR); //2.58.0.7
+                    case 51:
+                        return new ClientVersion(6, 0, 12, 4, ClientType.KR); //2.57.0.17
+                    case 50:
+                        return new ClientVersion(6, 0, 11, 0, ClientType.KR); //2.56.0.6
+                    case 49:
+                        return new ClientVersion(6, 0, 10, 0, ClientType.KR); //2.55.0.3 
+                    case 48:
+                        return new ClientVersion(6, 0, 9, 2, ClientType.KR); //2.54.0.7
+                    case 47:
+                        return new ClientVersion(6, 0, 8, 0, ClientType.KR); //2.53.0.2
+                    case 46:
+                        return new ClientVersion(6, 0, 7, 0, ClientType.KR); //2.52.0.4
+                    case 45:
+                        return new ClientVersion(6, 0, 6, 2, ClientType.KR); //2.51.0.3
+                    case 44:
+                        return new ClientVersion(6, 0, 5, 0, ClientType.KR); //2.48.0.7
+                    case 43:
+                        return new ClientVersion(6, 0, 4, 0, ClientType.KR); //2.47.1.10
+                    case 42:
+                        return new ClientVersion(6, 0, 3, 0, ClientType.KR); //2.47.0.8
+                    case 41:
+                        return new ClientVersion(6, 0, 2, 0, ClientType.KR); //2.46.1.9
+                    case 40:
+                        return new ClientVersion(6, 0, 1, 10, ClientType.KR); //2.46.1.6
+                    /*case 35:
+                        return new ClientVersion(6, 0, 1, 9, ClientType.KR); //2.45.7.3
+                    case 34:
+                        return new ClientVersion(6, 0, 1, 8, ClientType.KR); //2.45.6.3
+                    case 33:
+                        return new ClientVersion(6, 0, 1, 7, ClientType.KR); //2.45.5.6
+                    case 32:
+                        return new ClientVersion(6, 0, 1, 7, ClientType.KR); //2.45.5.4
+                    case 31:
+                        return new ClientVersion(6, 0, 1, 6, ClientType.KR); //2.45.4.4
+                    case 30:
+                        return new ClientVersion(6, 0, 1, 6, ClientType.KR); //2.45.4.3
+                    case 29:
+                        return new ClientVersion(6, 0, 1, 6, ClientType.KR); //2.45.4.2 //////
+                    case 28:
+                        return new ClientVersion(6, 0, 1, 5, ClientType.KR); //2.45.3.13
+                    case 27:
+                        return new ClientVersion(6, 0, 1, 5, ClientType.KR); //2.45.3.11
+                    case 26:
+                        return new ClientVersion(6, 0, 1, 5, ClientType.KR); //2.45.3.10
+                    case 25:
+                        return new ClientVersion(6, 0, 1, 4, ClientType.KR); //2.45.3.3
+                    case 24:
+                        return new ClientVersion(6, 0, 1, 4, ClientType.KR); //2.45.1.5
+                    case 23:
+                        return new ClientVersion(6, 0, 1, 4, ClientType.KR); //2.45.1.2
+                    case 22:
+                        return new ClientVersion(6, 0, 1, 3, ClientType.KR); //2.45.0.6
+                    case 21:
+                        return new ClientVersion(6, 0, 1, 3, ClientType.KR); //2.45.0.3
+                    case 20:
+                        return new ClientVersion(6, 0, 1, 2, ClientType.KR); //2.44.0.25
+                    case 19:
+                        return new ClientVersion(6, 0, 1, 1, ClientType.KR); //2.44.0.15*/
+                    default:
+                        return new ClientVersion(6, 0, 0, 0, ClientType.KR); //First KR Client 
+                }
+            }
+            else
+            {
+                return inVersion;
+            }
+        }
+
+    }
 }

@@ -3279,7 +3279,14 @@ m_Stream.Write( (int) renderMode );
 		{
 			FeatureFlags flags = ExpansionInfo.CurrentExpansion.SupportedFeatures;
 
-			flags |= m_AdditionalFlags;
+            //KR crashes if not at least LBR
+            //TODO: Check if Enhanced Client does the same
+            if (ns.IsKRClient)
+            {
+                flags |= FeatureFlags.ExpansionLBR;
+            }
+
+            flags |= m_AdditionalFlags;
 
 			IAccount acct = ns.Account;
 
@@ -3643,7 +3650,7 @@ m_Stream.Write( (int) renderMode );
 
 			int type;
 
-            bool isEnhancedClient = beholder.NetState != null && beholder.NetState.Version.IsEnhanced;
+            bool isEnhancedClient = beholder.NetState != null && beholder.NetState.IsEnhanced;
 
 			if (beholder != beheld)
 			{
@@ -5096,8 +5103,7 @@ m_Stream.Write( (int) renderMode );
             m_Stream.Write((byte)0x2F);
             m_Stream.Write((byte)0xE3);
             m_Stream.Write((byte)0x81);
-            m_Stream.Write((byte)0x93);// old book packet
-            m_Stream.Write((byte)0xD4);// new ec book packet?? testing
+            m_Stream.Write((byte)0x93);
             m_Stream.Write((byte)0xCB);
             m_Stream.Write((byte)0xAF);
             m_Stream.Write((byte)0x98);
@@ -5159,7 +5165,6 @@ m_Stream.Write( (int) renderMode );
             m_Stream.Write((byte)0x03);
             m_Stream.Write((byte)0xCB);
             m_Stream.Write((byte)0x53);
-            m_Stream.Write((byte)0x31);
         }
     }
 

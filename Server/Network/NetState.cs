@@ -68,25 +68,8 @@ namespace Server.Network
 		private readonly string m_ToString;
 		private ClientVersion m_Version;
 		private bool m_BlockAllPackets;
-        #region Enhance Client
-        private bool m_KRClient;
-        #endregion
 
 		private readonly DateTime m_ConnectedOn;
-
-        #region Enhance Client
-        public bool IsKRClient
-        {
-            get
-            {
-                return m_KRClient;
-            }
-            set
-            {
-                m_KRClient = value;
-            }
-        }
-        #endregion
 
 		public DateTime ConnectedOn { get { return m_ConnectedOn; } }
 
@@ -256,12 +239,18 @@ namespace Server.Network
 		public bool ExtendedStatus { get { return ((_ProtocolChanges & ProtocolChanges.ExtendedStatus) != 0); } }
 		public bool NewMobileIncoming { get { return ((_ProtocolChanges & ProtocolChanges.NewMobileIncoming) != 0); } }
 		public bool NewSecureTrading { get { return ((_ProtocolChanges & ProtocolChanges.NewSecureTrading) != 0); } }
+        public bool SupportsParticleEffects { get { return (IsUOTDClient || IsKRClient || IsECClient); } }
 
-		public bool IsUOTDClient { get { return ((m_Flags & ClientFlags.UOTD) != 0 || (m_Version != null && m_Version.Type == ClientType.UOTD)); } }
+        public bool IsUOTDClient { get { return ((m_Flags & ClientFlags.UOTD) != 0 || (m_Version != null && m_Version.Type == ClientType.UOTD)); } }
 
-		public bool IsSAClient { get { return (m_Version != null && m_Version.Type == ClientType.SA); } }
+        public bool IsECClient { get { return (m_Version != null && m_Version.Type == ClientType.EC); } }
+ 
+        public bool IsKRClient { get { return (m_Version != null && m_Version.Type == ClientType.KR); } }
+ 
+        public bool IsEnhanced { get { return IsKRClient || IsECClient; } }
 
-		public List<SecureTrade> Trades { get { return m_Trades; } }
+
+        public List<SecureTrade> Trades { get { return m_Trades; } }
 
 		public void ValidateAllTrades()
 		{

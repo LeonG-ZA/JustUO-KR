@@ -2887,7 +2887,7 @@ namespace Server.Network
 				state.Dispose();
 				return;
 			}
-			else if (state.m_AuthID == 0 && authID != state.m_Seed)
+			else if (state.m_AuthID == 0 && authID != state.m_Seed && !state.IsKRClient)
 			{
 				Utility.PushColor(ConsoleColor.DarkRed);
 				Console.WriteLine("Login: {0}: Invalid client detected, disconnecting", state);
@@ -2965,8 +2965,8 @@ namespace Server.Network
 			int clientRev = pvSrc.ReadInt32();
 			int clientPat = pvSrc.ReadInt32();
 
-			state.Version = new ClientVersion(clientMaj, clientMin, clientRev, clientPat);
-		}
+            state.Version = CV.ConvertToRegularVersion(new ClientVersion(clientMaj, clientMin, clientRev, clientPat));
+        }
 
 		public static void CrashReport(NetState state, PacketReader pvSrc)
 		{

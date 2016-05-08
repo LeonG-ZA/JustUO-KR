@@ -146,15 +146,17 @@ namespace Server.Network
 
 		private bool HandleSeed(NetState ns, ByteQueue buffer)
 		{
+            byte packetId = buffer.GetPacketID();
+
             #region Enhance Client
-            if (buffer.GetPacketID() == 0xFF)
+            if (packetId == 0xFF)
             {
                 // Packet 255 = 0xFF = Client KR.
-                ns.IsKRClient = true;
+                ns.m_Seed = -1;
                 Console.WriteLine("KR-Client detected", ns);
             }
             #endregion
-			if (buffer.GetPacketID() == 0xEF)
+			if ((packetId == 0xEF) || (packetId == 0xFF))
 			{
 				// new packet in client	6.0.5.0	replaces the traditional seed method with a	seed packet
 				// 0xEF	= 239 =	multicast IP, so this should never appear in a normal seed.	 So	this is	backwards compatible with older	clients.
@@ -335,21 +337,6 @@ namespace Server.Network
 					}
 				}
 			}
-            #region Enhance Client
-            // Would be nicer to detect the enhanced client in clientversion.cs
-            // It seems that UOKR-EH sends a version number bigger 66.0.0.0, UOSA-EH bigger 67.0.0.0
-            try
-            {
-                if (ns.Version.Major > 8)
-                    ns.IsKRClient = true;
-            }
-            //Standard classic client does not display version this early, so we can rule SA enhanced client out
-            catch
-            {
-                ns.IsKRClient = false;
-            }
-            return;
-            #endregion
 		}
 	}
 }

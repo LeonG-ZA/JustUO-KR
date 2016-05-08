@@ -743,7 +743,7 @@ namespace Server.Multis
             SetSign(x, y, 7);
 
             NetState ns = owner.NetState;
-            if (ns.IsKRClient)
+            if (ns.IsEnhanced)
             {
                 Timer.DelayCall(TimeSpan.Zero, ECEndConfirmCommit, owner); 
             }

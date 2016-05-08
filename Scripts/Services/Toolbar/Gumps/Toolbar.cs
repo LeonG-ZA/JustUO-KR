@@ -74,7 +74,7 @@ namespace Services.Toolbar.Gumps
 				x = offset + ((i % _Info.Rows) * 110);
 				y = offset + (int)(Math.Floor((double)(i / _Info.Rows)) * 24) + cy;
 
-                if (ns.IsKRClient)
+                if (ns.IsEnhanced)
                 {
                     AddButton(x + 1, y, 2435, 2436, temp + 10, GumpButtonType.Reply, 0);//4005, 4007
                 }
@@ -90,7 +90,7 @@ namespace Services.Toolbar.Gumps
 					AddAlphaRegion(x + 2, y + 2, 106, 20); // Alpha Area 1_2
 				}
 
-                if (ns.IsKRClient)
+                if (ns.IsEnhanced)
                 {
                     AddHtml(x + 30, y + 3, 100, 20, String.Format("<center>{0}{1}", font, _Info.Entries[temp]), false, false);
                     //AddLabelCropped(x + 5, y + 3, 100, 20, GumpIDs.Misc[(int)GumpIDs.MiscIDs.Color].Content[p_Skin,0], Commands[temp]); 
