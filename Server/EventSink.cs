@@ -1122,7 +1122,7 @@ namespace Server
 		{
 			if (ClientVersionReceived != null)
 			{
-				ClientVersionReceived(e);
+                ClientVersionReceived(e);
 			}
 		}
 

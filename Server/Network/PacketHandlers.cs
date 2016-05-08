@@ -2976,7 +2976,13 @@ namespace Server.Network
 			int clientRev = pvSrc.ReadInt32();
 			int clientPat = pvSrc.ReadInt32();
 
-            state.Version = CV.ConvertToRegularVersion(new ClientVersion(clientMaj, clientMin, clientRev, clientPat));
+            ClientVersion version = CV.ConvertToRegularVersion(new ClientVersion(clientMaj, clientMin, clientRev, clientPat));
+            state.Version = version;
+
+            if (state.IsEnhanced)
+            {
+                EventSink.InvokeClientVersionReceived(new ClientVersionReceivedArgs(state, version));
+            }
         }
 
 		public static void CrashReport(NetState state, PacketReader pvSrc)

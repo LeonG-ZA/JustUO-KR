@@ -10,11 +10,11 @@ namespace Server.Misc
     public class ClientVerification
     {
         private static readonly bool m_DetectClientRequirement = true;
-        private static readonly OldClientResponse m_OldClientResponse = OldClientResponse.LenientKick;
+        private static readonly OldClientResponse m_OldClientResponse = OldClientResponse.Ignore;
         private static readonly TimeSpan m_AgeLeniency = TimeSpan.FromDays(10);
         private static readonly TimeSpan m_GameTimeLeniency = TimeSpan.FromHours(25);
         private static ClientVersion m_Required;
-        private static bool m_AllowRegular = true, m_AllowUOTD = true, m_AllowGod = true;
+        private static bool m_AllowRegular = true, m_AllowUOTD = true, m_AllowGod = true, m_AllowKR = true, m_AllowEC = true;
         private static TimeSpan m_KickDelay = TimeSpan.FromSeconds(20.0);
 
         private enum OldClientResponse
@@ -112,79 +112,115 @@ namespace Server.Misc
 
         private static void EventSink_ClientVersionReceived(ClientVersionReceivedArgs e)
         {
-            string kickMessage = null;
-            NetState state = e.State;
-            ClientVersion version = e.Version;
-
-            if (state.Mobile.IsStaff())
-                return;
-
-            if (Required != null && version < Required && (m_OldClientResponse == OldClientResponse.Kick || (m_OldClientResponse == OldClientResponse.LenientKick && (DateTime.UtcNow - state.Mobile.CreationTime) > m_AgeLeniency && state.Mobile is PlayerMobile && ((PlayerMobile)state.Mobile).GameTime > m_GameTimeLeniency)))
+            //e.State.Mobile is null when Enhanced clients are checked
+            if (e.State.IsEnhanced)
             {
-                kickMessage = String.Format("This server requires your client version be at least {0}.", Required);
-            }
-            else if (!AllowGod || !AllowRegular || !AllowUOTD)
-            {
-                if (!AllowGod && version.Type == ClientType.God)
-                    kickMessage = "This server does not allow god clients to connect.";
-                else if (!AllowRegular && version.Type == ClientType.Regular)
-                    kickMessage = "This server does not allow regular clients to connect.";
-                else if (!AllowUOTD && state.IsUOTDClient)
-                    kickMessage = "This server does not allow UO:TD clients to connect.";
+                bool allowed = true;
 
-                if (!AllowGod && !AllowRegular && !AllowUOTD)
+                if ((Required != null && e.Version < Required) && ((m_OldClientResponse == OldClientResponse.Kick) || (m_OldClientResponse == OldClientResponse.LenientKick)))
                 {
-                    kickMessage = "This server does not allow any clients to connect.";
+                    allowed = false;
                 }
-                else if (AllowGod && !AllowRegular && !AllowUOTD && version.Type != ClientType.God)
+                if ((e.Version.Type == ClientType.KR) && (m_AllowKR == false))
                 {
-                    kickMessage = "This server requires you to use the god client.";
+                    allowed = false;
                 }
-                else if (kickMessage != null)
+                if ((e.Version.Type == ClientType.EC) && (m_AllowEC == false))
                 {
-                    if (AllowRegular && AllowUOTD)
-                        kickMessage += " You can use regular or UO:TD clients.";
-                    else if (AllowRegular)
-                        kickMessage += " You can use regular clients.";
-                    else if (AllowUOTD)
-                        kickMessage += " You can use UO:TD clients.";
+                    allowed = false;
                 }
-            }
 
-            if (kickMessage != null)
-            {
-                state.Mobile.SendMessage(0x22, kickMessage);
-                state.Mobile.SendMessage(0x22, "You will be disconnected in {0} seconds.", KickDelay.TotalSeconds);
-
-                Timer.DelayCall(KickDelay, delegate
+                if (!allowed)
                 {
-                    if (state.Socket != null)
+                    if (e.State.Socket != null)
                     {
                         Utility.PushColor(ConsoleColor.DarkRed);
-                        Console.WriteLine("Client: {0}: Disconnecting, bad version", state);
+                        Console.WriteLine("Client: {0}: Disconnecting, bad version '{1}'", e.State, e.Version.ToString());
                         Utility.PopColor();
-                        state.Dispose();
+                        e.State.Dispose();
                     }
-                });
+                }
+
             }
-            else if (Required != null && version < Required)
+            else
             {
-                switch( m_OldClientResponse )
+                string kickMessage = null;
+                NetState state = e.State;
+                ClientVersion version = e.Version;
+
+                if (state.Mobile.IsStaff())
+                    return;
+
+                if (Required != null && version < Required && (m_OldClientResponse == OldClientResponse.Kick || (m_OldClientResponse == OldClientResponse.LenientKick && (DateTime.UtcNow - state.Mobile.CreationTime) > m_AgeLeniency && state.Mobile is PlayerMobile && ((PlayerMobile)state.Mobile).GameTime > m_GameTimeLeniency)))
                 {
-                    case OldClientResponse.Warn:
+                    kickMessage = String.Format("This server requires your client version be at least {0}.", Required);
+                }
+                else if (!AllowGod || !AllowRegular || !AllowUOTD)
+                {
+                    if (!AllowGod && version.Type == ClientType.God)
+                        kickMessage = "This server does not allow god clients to connect.";
+                    else if (!AllowRegular && version.Type == ClientType.Regular)
+                        kickMessage = "This server does not allow regular clients to connect.";
+                    else if (!AllowUOTD && state.IsUOTDClient)
+                        kickMessage = "This server does not allow UO:TD clients to connect.";
+
+                    if (!AllowGod && !AllowRegular && !AllowUOTD)
+                    {
+                        kickMessage = "This server does not allow any clients to connect.";
+                    }
+                    else if (AllowGod && !AllowRegular && !AllowUOTD && version.Type != ClientType.God)
+                    {
+                        kickMessage = "This server requires you to use the god client.";
+                    }
+                    else if (kickMessage != null)
+                    {
+                        if (AllowRegular && AllowUOTD)
+                            kickMessage += " You can use regular or UO:TD clients.";
+                        else if (AllowRegular)
+                            kickMessage += " You can use regular clients.";
+                        else if (AllowUOTD)
+                            kickMessage += " You can use UO:TD clients.";
+                    }
+                }
+
+                if (kickMessage != null)
+                {
+                    state.Mobile.SendMessage(0x22, kickMessage);
+                    state.Mobile.SendMessage(0x22, "You will be disconnected in {0} seconds.", KickDelay.TotalSeconds);
+
+                    Timer.DelayCall(KickDelay, delegate
+                    {
+                        if (state.Socket != null)
                         {
-                            state.Mobile.SendMessage(0x22, "Your client is out of date. Please update your client.", Required);
-                            state.Mobile.SendMessage(0x22, "This server recommends that your client version be at least {0}.", Required);
-                            break;
+                            Utility.PushColor(ConsoleColor.DarkRed);
+                            Console.WriteLine("Client: {0}: Disconnecting, bad version '{1}'", state, version.ToString());
+                            Utility.PopColor();
+                            state.Dispose();
                         }
-                    case OldClientResponse.LenientKick:
-                    case OldClientResponse.Annoy:
-                        {
-                            SendAnnoyGump(state.Mobile);
-                            break;
-                        }
+                    });
+                }
+                else if (Required != null && version < Required)
+                {
+                    switch (m_OldClientResponse)
+                    {
+                        case OldClientResponse.Warn:
+                            {
+                                state.Mobile.SendMessage(0x22, "Your client is out of date. Please update your client.", Required);
+                                state.Mobile.SendMessage(0x22, "This server recommends that your client version be at least {0}.", Required);
+                                break;
+                            }
+                        case OldClientResponse.LenientKick:
+                        case OldClientResponse.Annoy:
+                            {
+                                SendAnnoyGump(state.Mobile);
+                                break;
+                            }
+                    }
                 }
             }
+
+
+
         }
 
         private static void SendAnnoyGump(Mobile m)
