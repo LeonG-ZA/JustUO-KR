@@ -153,7 +153,13 @@ namespace Server.Network
             {
                 // Packet 255 = 0xFF = Client KR.
                 ns.m_Seed = -1;
-                Console.WriteLine("KR-Client detected", ns);
+                // KR Client detected 
+                if (ns.Version == null)
+                {
+                    //Set inital version. Older KR Clients don't send the version number
+                    ns.Version = new ClientVersion(6, 0, 1, 10, Server.ClientType.KR); //KR 2.46.0.3
+                }
+
             }
             #endregion
 			if ((packetId == 0xEF) || (packetId == 0xFF))

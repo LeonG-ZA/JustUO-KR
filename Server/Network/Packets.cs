@@ -3683,14 +3683,20 @@ m_Stream.Write( (int) renderMode );
 
 			int type;
 
-            bool isEnhancedClient = beholder.NetState != null && beholder.NetState.IsEnhanced;
+            bool isKrClient = beholder.NetState != null && beholder.NetState.IsKRClient;
+            bool isEcClient = beholder.NetState != null && beholder.NetState.IsECClient;
 
 			if (beholder != beheld)
 			{
 				type = 0;
 				EnsureCapacity(43);
 			}
-            else if (isEnhancedClient)
+            else if (isKrClient)
+            {
+                type = 6;
+                EnsureCapacity(161);
+            }
+            else if (isEcClient)
             {
                 type = 7;
                 EnsureCapacity(149);
@@ -3784,7 +3790,7 @@ m_Stream.Write( (int) renderMode );
 						m_Stream.Write((short)beheld.GetAosStatus(i));
 					}
 
-                    if (isEnhancedClient)
+                    if (isKrClient || isEcClient)
                     {
                         m_Stream.Write((short)beheld.AttackChance); // Hit Chance Increase
                         m_Stream.Write((short)beheld.WeaponSpeed); // Swing Speed Increase

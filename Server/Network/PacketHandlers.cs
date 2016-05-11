@@ -2244,13 +2244,9 @@ namespace Server.Network
 
 		public static void ClientType(NetState state, PacketReader pvSrc)
 		{
-			pvSrc.ReadUInt16();
-
-			int type = pvSrc.ReadUInt16();
-			CV version = state.Version = new CV(pvSrc.ReadString());
-
-			//EventSink.InvokeClientVersionReceived( new ClientVersionReceivedArgs( state, version ) );//todo
-		}
+            int always1 = pvSrc.ReadInt16();
+            int clientFlags = pvSrc.ReadInt32();
+        }
 
 		public static void MobileQuery(NetState state, PacketReader pvSrc)
 		{
@@ -2874,12 +2870,35 @@ namespace Server.Network
 
 			int authID = pvSrc.ReadInt32();
 
+            bool oldKrVersion = false;
+
 			if (m_AuthIDWindow.ContainsKey(authID))
 			{
 				AuthIDPersistence ap = m_AuthIDWindow[authID];
 				m_AuthIDWindow.Remove(authID);
 
-				state.Version = ap.Version;
+                if (ap.Version != null)
+                {
+                    state.Version = ap.Version;
+                }
+
+                if (state.Version != null)
+                {
+                    if (state.Version.Type == Server.ClientType.KR
+                        && state.Version.Major == 6
+                        && state.Version.Minor == 0
+                        && state.Version.Revision == 1
+                        && state.Version.Patch == 10)
+                    {
+                        EventSink.InvokeClientVersionReceived(new ClientVersionReceivedArgs(state, state.Version));
+                        if (state.Running == false)
+                        {
+                            return;
+                        }
+                        oldKrVersion = true;
+                    }
+                }
+
 			}
 			else if (m_ClientVerification)
 			{
@@ -2890,22 +2909,25 @@ namespace Server.Network
 				return;
 			}
 
-			if (state.m_AuthID != 0 && authID != state.m_AuthID)
-			{
-				Utility.PushColor(ConsoleColor.DarkRed);
-				Console.WriteLine("Login: {0}: Invalid client detected, disconnecting", state);
-				Utility.PopColor();
-				state.Dispose();
-				return;
-			}
-			else if (state.m_AuthID == 0 && authID != state.m_Seed && !state.IsKRClient)
-			{
-				Utility.PushColor(ConsoleColor.DarkRed);
-				Console.WriteLine("Login: {0}: Invalid client detected, disconnecting", state);
-				Utility.PopColor();
-				state.Dispose();
-				return;
-			}
+            if (!oldKrVersion)
+            {
+                if (state.m_AuthID != 0 && authID != state.m_AuthID)
+                {
+                    Utility.PushColor(ConsoleColor.DarkRed);
+                    Console.WriteLine("Login: {0}: Invalid client detected, disconnecting", state);
+                    Utility.PopColor();
+                    state.Dispose();
+                    return;
+                }
+                else if (state.m_AuthID == 0 && authID != state.m_Seed && !state.IsKRClient)
+                {
+                    Utility.PushColor(ConsoleColor.DarkRed);
+                    Console.WriteLine("Login: {0}: Invalid client detected, disconnecting", state);
+                    Utility.PopColor();
+                    state.Dispose();
+                    return;
+                }
+            }
 
 			string username = pvSrc.ReadString(30);
 			string password = pvSrc.ReadString(30);
@@ -2976,12 +2998,11 @@ namespace Server.Network
 			int clientRev = pvSrc.ReadInt32();
 			int clientPat = pvSrc.ReadInt32();
 
-            ClientVersion version = CV.ConvertToRegularVersion(new ClientVersion(clientMaj, clientMin, clientRev, clientPat));
-            state.Version = version;
+            state.Version = CV.ConvertToRegularVersion(new ClientVersion(clientMaj, clientMin, clientRev, clientPat));
 
             if (state.IsEnhanced)
             {
-                EventSink.InvokeClientVersionReceived(new ClientVersionReceivedArgs(state, version));
+                EventSink.InvokeClientVersionReceived(new ClientVersionReceivedArgs(state, state.Version));
             }
         }
 
@@ -3078,7 +3099,6 @@ namespace Server.Network
         // KR Client Signal (Seed)
         public static void KRSeed(NetState state, PacketReader pvSrc)
         {
-            // KR Client detected 
             state.Send(new KRVerifier());
         }
 
